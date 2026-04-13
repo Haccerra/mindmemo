@@ -120,3 +120,34 @@ func (r *Repository) CreateOpenSession(ctx context.Context, name string, autoNam
 		CreatedAt: created,
 	}, nil
 }
+
+func (r *Repository) GetActiveSession(ctx context.Context) (*model.Session, error) {
+	idRaw, err := r.getState(ctx, "active_session_id")
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	id, err := strconv.ParseInt(idRaw, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := r.GetSessionByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			_ = r.clearState(ctx, "active_session_id")
+			return nil, nil
+		}
+		return nil, err
+	}
+	if !s.IsOpen {
+		_ = r.clearState(ctx, "active_session_id")
+		return nil, nil
+	}
+
+	return s, nil
+}
+
