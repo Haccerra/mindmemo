@@ -48,6 +48,17 @@ func migrate(db *sql.DB) error {
 			created_at text not null,
 			closed_at text
 		)`,
+		`create table if not exists history_entries (
+			id integer primary key autoincrement,
+			session_id integer not null,
+			seq integer not null,
+			source_command text not null,
+			output blob not null,
+			alias_root text,
+			alias_revision integer not null default 0,
+			created_at text not null,
+			foreign key(session_id) references sessions(id) on delete cascade
+		)`,
 	}
 
 	return nil
