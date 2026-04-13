@@ -233,3 +233,11 @@ func (r *Repository) CleanupActiveSession(ctx context.Context) error {
 
 	return tx.Commit()
 }
+
+func (r *Repository) DeleteSessionByID(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx,
+			`delete from sessions where id = ?`, id,
+	)
+	return err
+}
+
