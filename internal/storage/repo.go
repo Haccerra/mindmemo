@@ -383,3 +383,75 @@ func (r *Repository) ResumeClosedSession(ctx context.Context, id int64, pid int)
 
 	return r.GetSessionByID(ctx, id)
 }
+
+func (r *Repository) ReconcileStaleOpenSessions(
+		ctx context.Context,
+		aliveFn func(int) bool,
+) (int, error) {
+	rows, err := r.db.QueryContext(ctx,
+			`select id, open_pid from sessions where is_open = 1`,
+	)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	var staleIDs []int64
+	for rows.Next() {
+		var id int64
+		var pid int
+
+		if err := rows.Scan(&id, &pid); err != nil {
+			return 0, err
+		}
+		if pid <= 0 || !aliveFn(pid) {
+			staleIDs = append(staleIDs, id)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return 0, nil
+	}
+
+	if len(staleIDs) == 0 {
+		return 0, nil
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	for _, id := range staleIDs {
+		if _, err := tx.ExecContext(ctx,
+				`update sessions
+				set is_open = 0, open_pid = 0,
+					closed_at = coalesce(closed_at, ?)
+				where id = ?
+				`, nowText(), id); err != nil {
+			return 0, err
+		}
+	}
+
+	activeRaw, err := r.getStateTx(ctx, tx, "active_session_id")
+	if err == nil {
+		activeID, convErr := strconv.ParseInt(activeRaw, 10, 64)
+		if convErr == nil {
+			for _, id := range staleIDs {
+				if id == activeID {
+					if err := r.clearStateTx(ctx, tx, "active_session_id"); err != nil {
+						return 0, err
+					}
+					break
+				}
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+
+	return len(staleIDs), nil
+}
