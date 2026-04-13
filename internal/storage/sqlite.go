@@ -82,6 +82,10 @@ func migrate(db *sql.DB) error {
 			primary key(session_id, name),
 			foreign key(session_id) references sessions(id) on delete cascade
 		)`,
+		`create table if not exists runtime_state (
+			key text primary key,
+			value text not null
+		)`,
 	}
 
 	return nil
