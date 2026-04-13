@@ -273,3 +273,11 @@ func (r *Repository) LatestUnnamedClosedSession(ctx context.Context) (*model.Ses
 	}
 	return s, nil
 }
+
+func (r *Repository) SetSessionMode(ctx context.Context, id int64, mode model.SessionMode) error {
+	_, err := r.db.ExecContext(ctx,
+			`update sessions set mode = ? where id = ?`,
+			string(mode), id,
+	)
+	return err
+}
