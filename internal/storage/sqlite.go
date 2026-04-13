@@ -73,6 +73,15 @@ func migrate(db *sql.DB) error {
 			created_at text not null,
 			updated_at text not null
 		)`,
+		`create table if not exists session_procs (
+			session_id integer not null,
+			name text not null,
+			definition text not null,
+			description text not null,
+			updated_at text not null,
+			primary key(session_id, name),
+			foreign key(session_id) references sessions(id) on delete cascade
+		)`,
 	}
 
 	return nil
