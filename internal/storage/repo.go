@@ -161,3 +161,47 @@ func (r *Repository) GetSessionByID(ctx context.Context, id int64) (*model.Sessi
 		)
 	return scanSession(row)
 }
+
+func (r *Repository) CloseActiveSession(ctx context.Context) (*model.Session, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	active, err := r.getActiveSessionTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	if active == nil {
+		return nil, ErrNoActiveSession
+	}
+
+	if _, err := tx.ExecContext(ctx,
+			`update sessions
+			set is_open = 0, open_pid = 0, closed_at = ?
+			where id = ?
+			`,
+			nowText(), active.ID); err != nil {
+				return nil, err
+	}
+
+	if err := r.clearStateTx(ctx, tx, "active_session_id"); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	closed, err := r.GetSessionByID(ctx, active.ID)
+	if err != nil {
+		return nil, err
+	}
+	if closed.Mode == model.SessionModeTemp {
+		if err := r.DeleteSessionByID(ctx, closed.ID); err != nil {
+			return closed, err
+		}
+	}
+	return closed, nil
+}
