@@ -88,5 +88,17 @@ func migrate(db *sql.DB) error {
 		)`,
 	}
 
+	for _, statement := range statements {
+		if _, err := db.Exec(statement); err != nil {
+			return fmt.Errorf("Migration failed: %w", err)
+		}
+	}
+
+	if _, err := db.Exec(`insert into runtime_state(key, value)
+			values('unknown_counter', '0')
+			on conflict(key) do nothing`); err != nil {
+		return err
+	}
+
 	return nil
 }
