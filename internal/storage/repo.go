@@ -250,3 +250,26 @@ func (r *Repository) RenameSession(ctx context.Context, id int64, newName string
 	)
 	return err
 }
+
+func (r *Repository) LatestUnnamedClosedSession(ctx context.Context) (*model.Session, error) {
+	row := r.db.QueryRowContext(ctx,
+			`select id, name, auto_named, mode, is_open,
+				open_pid, shell, created_at, closed_at,
+			from sessions
+			where auto_named = 1 and is_open = 0
+			order by id desc
+			limit 1
+	`)
+
+	s, err := scanSession(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		if errors.Is(err, ErrNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return s, nil
+}
