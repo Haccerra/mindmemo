@@ -281,3 +281,30 @@ func (r *Repository) SetSessionMode(ctx context.Context, id int64, mode model.Se
 	)
 	return err
 }
+
+func (r *Repository) ListSessions(ctx context.Context) ([]model.Session, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`select id, name, auto_named, mode, is_open,
+			open_pid, shell, created_at, closed_at
+		from sessions
+		ordered by id desc
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []model.Session
+	for rows.Next() {
+		s, err := scanSessionRows(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *s)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
