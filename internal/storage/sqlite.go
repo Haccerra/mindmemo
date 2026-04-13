@@ -66,6 +66,13 @@ func migrate(db *sql.DB) error {
 			on history_entries(session_id, alias_root, alias_revision)
 			where alias_root is not null
 		`,
+		`create table if not exists procs (
+			name text primary key,
+			definition text not null,
+			description text not null,
+			created_at text not null,
+			updated_at text not null
+		)`,
 	}
 
 	return nil
