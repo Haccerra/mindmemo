@@ -151,3 +151,13 @@ func (r *Repository) GetActiveSession(ctx context.Context) (*model.Session, erro
 	return s, nil
 }
 
+func (r *Repository) GetSessionByID(ctx context.Context, id int64) (*model.Session, error) {
+	row := r.db.QueryRowContext(ctx,
+			`select id, name, auto_named, mode, is_open,
+				open_pid, shell, created_at, closed_at
+			from sessions where id = ?
+			`,
+			id,
+		)
+	return scanSession(row)
+}
