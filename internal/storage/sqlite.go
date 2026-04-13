@@ -36,5 +36,19 @@ func Open(path string) (*sql.DB, error) {
 }
 
 func migrate(db *sql.DB) error {
+	statements := []string {
+		`create table if not exists sessions (
+			id integer primary key autoincrement,
+			name text not null,
+			auto_named integer not null default 0,
+			mode text not null,
+			is_open integer not null default 0,
+			open_pid integer not null default 0,
+			shell text not null,
+			created_at text not null,
+			closed_at text
+		)`,
+	}
+
 	return nil
 }
