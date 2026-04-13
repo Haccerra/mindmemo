@@ -59,6 +59,13 @@ func migrate(db *sql.DB) error {
 			created_at text not null,
 			foreign key(session_id) references sessions(id) on delete cascade
 		)`,
+		`create index if not exists idx_history_session_seq
+			on history_entries(session_id, seq)
+		`,
+		`create unique index if not exists uniq_alias_revision
+			on history_entries(session_id, alias_root, alias_revision)
+			where alias_root is not null
+		`,
 	}
 
 	return nil
