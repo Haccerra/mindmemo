@@ -337,3 +337,49 @@ func (r *Repository) ListClosedSessions(ctx context.Context) ([]model.Session, e
 
 	return out, nil
 }
+
+func (r *Repository) ResumeClosedSession(ctx context.Context, id int64, pid int) (*model.Session, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	active, err := r.getActiveSessionTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	if active != nil {
+		return nil, fmt.Errorf("session %q is already active", active.Name)
+	}
+
+	row := tx.QueryRowContext(ctx,
+			`select id, name, auto_named, mode, is_open,
+				open_pid, shell, created_at, closed_at
+			from sessions where id = ?
+			`, id,
+	)
+
+	session, err := scanSession(row)
+	if err != nil {
+		return nil, err
+	}
+	if session.IsOpen {
+		return nil, fmt.Errorf("selected session is already open")
+	}
+
+	if _, err := tx.ExecContext(ctx,
+			`update sessions
+			set is_open = 1, open_pid = ?, closed_at = NULL
+			where id = ?
+			`, pid, id); err != nil {
+		return nil, err
+	}
+
+	if err := r.setStateTx(ctx, tx, "active_session_id",
+			strconv.FormatInt(id, 10)); err != nil {
+		return nil, err
+	}
+
+	return r.GetSessionByID(ctx, id)
+}
