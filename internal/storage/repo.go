@@ -205,3 +205,31 @@ func (r *Repository) CloseActiveSession(ctx context.Context) (*model.Session, er
 	}
 	return closed, nil
 }
+
+func (r *Repository) CleanupActiveSession(ctx context.Context) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	active, err := r.getActiveSessionTx(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if active == nil {
+		return ErrNoActiveSession
+	}
+
+	if _, err := tx.ExecContext(ctx,
+			`delete from sessions where id = ?`,
+			active.ID); err != nil {
+		return err
+	}
+
+	if err := r.clearStateTx(ctx, tx, "active_session_id"); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
