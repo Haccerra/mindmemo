@@ -241,3 +241,12 @@ func (r *Repository) DeleteSessionByID(ctx context.Context, id int64) error {
 	return err
 }
 
+func (r *Repository) RenameSession(ctx context.Context, id int64, newName string) error {
+	_, err := r.db.ExecContext(ctx,
+			`update sessions
+			set name = ?, auto_named = 0
+			where id = ?
+			`, newName, id,
+	)
+	return err
+}
