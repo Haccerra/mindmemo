@@ -455,3 +455,18 @@ func (r *Repository) ReconcileStaleOpenSessions(
 
 	return len(staleIDs), nil
 }
+
+func (r *Repository) NextSeq(ctx context.Context, sessionID int64) (int64, error) {
+	row := r.db.QueryRowContext(ctx,
+			`select coalesce(max(seq), 0) + 1
+			from history_entries
+			where session_id = ?`,
+			sessionID,
+	)
+
+	var seq int64
+	if err := row.Scan(&seq); err != nil {
+		return 0, err
+	}
+	return seq, nil
+}
