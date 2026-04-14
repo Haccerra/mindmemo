@@ -721,3 +721,19 @@ func (r *Repository) GetNameBaseCommand(
 	)
 	return scanHistory(row)
 }
+
+func (r *Repository) NextAliasRevision(ctx context.Context, sessionID int64, alias string) (int, error) {
+	row := r.db.QueryRowContext(ctx,
+			`select coalesce(max(alias_revision), 0) + 1
+			from history_entries
+			where session_id = ? and alias_root = ?`,
+			sessionID, alias,
+	)
+
+	var rev int
+	if err := row.Scan(&rev); err != nil {
+		return 0, err
+	}
+
+	return rev, nil
+}
