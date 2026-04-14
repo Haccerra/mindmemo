@@ -884,3 +884,46 @@ func (r *Repository) GetProc(ctx context.Context, name string) (*model.Proc, err
 	p.UpdatedAt = updatedAt
 	return &p, nil
 }
+
+func (r *Repository) ListProcs(ctx context.Context) ([]model.Proc, error) {
+	rows, err := r.db.QueryContext(ctx,
+			`select name, definition, description,
+				created_at, updated_at
+			from procs
+			order by name asc`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []model.Proc
+	for rows.Next() {
+		var p model.Proc
+		var created, updated string
+		if err := rows.Scan(&p.Name, &p.Definition, &p.Description,
+				&created, &updated); err != nil {
+			return nil, err
+		}
+
+		createdAt, err := parseTime(updated)
+		if err != nil {
+			return nil, err
+		}
+
+		updatedAt, err := parseTime(updated)
+		if err != nil {
+			return nil, err
+		}
+
+		p.CreatedAt = createdAt
+		p.UpdatedAt = updatedAt
+		out = append(out, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
