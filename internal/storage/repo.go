@@ -843,3 +843,11 @@ func (r *Repository) UpsertProc(ctx context.Context, name, definition, descripti
 	)
 	return err
 }
+
+func (r *Repository) DeleteProc(ctx context.Context, name string) error {
+	_, err := r.db.ExecContext(ctx,
+			`delete from procs where name = ?`,
+			name,
+	)
+	return err
+}
