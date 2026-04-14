@@ -600,3 +600,33 @@ func (r *Repository) GetHistoryEntry(ctx context.Context, id int64) (*model.Hist
 	)
 	return scanHistory(row)
 }
+
+func (r *Repository) ListHistory(ctx context.Context, sessionID int64) ([]model.HistoryEntry, error) {
+	rows, err := r.db.QueryContext(ctx,
+			`select id, session_id, seq, source_command, output,
+				coalesce(alias_root, ''), alias_revision, created_at
+			from history_entries
+			where session_id = ?
+			order by seq asc`,
+			sessionID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []model.HistoryEntry
+	for rows.Next() {
+		e, err := scanHistoryRows(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
