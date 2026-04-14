@@ -630,3 +630,41 @@ func (r *Repository) ListHistory(ctx context.Context, sessionID int64) ([]model.
 
 	return out, nil
 }
+
+func (r *Repository) SearchHistory(
+		ctx context.Context,
+		sessionID int64,
+		pattern string,
+) ([]model.HistoryEntry, error) {
+	q := "%" + string.ToLower(pattern) + "%"
+	rows, err := r.db.QueryContext(ctx,
+			`select id, session_id, seq, source_command, output,
+				coalesce(alias_root, ''), alias_revision, created_at
+			from history_entries
+			where session_id = ? and (
+				lower(source_command) like ? or
+				lower(coalesce(alias_root, '')) like ?
+			)
+			order by seq asc`,
+			sessionID, q, q,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []model.HistroyEntry
+	for rows.Next() {
+		e, err := scanHistoryRows(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
