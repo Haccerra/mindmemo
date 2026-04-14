@@ -589,3 +589,14 @@ func (r *Repository) NameLastHistoryEntry(ctx context.Context, sessionID int64, 
 
 	return updated, nil
 }
+
+func (r *Repository) GetHistoryEntry(ctx context.Context, id int64) (*model.HistoryEntry, error) {
+	row := r.db.QueryRowContext(ctx,
+			`select id, session_id, seq, source_command, output,
+				coalesce(alias_root, ''), alias_revision, created_at
+			from history_entries
+			where id = ?`,
+			id,
+	)
+	return scanHistory(row)
+}
