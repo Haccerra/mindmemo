@@ -761,3 +761,37 @@ func (r *Repository) GetAliasRevisionByOffset(
 	}
 	return &entries[index], nil
 }
+
+func (r *Repository) ListAliasRevisions(
+		ctx context.Context,
+		sessionID int64,
+		alias string,
+) ([]model.HistoryEntry, error) {
+	rows, err := r.db.QueryContext(ctx,
+			`select id, session_id, seq, source_command, output,
+				coalesce(alias_root, ''), alias_revision, created_at
+			from history_entries
+			where session_id = ? and alias_root = ?
+			order by alias_revision desc`,
+			sessionID, alias,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []model.HistoryEntry
+	for rows.Next() {
+		e, err := scanHistoryRows(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
