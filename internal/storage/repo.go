@@ -703,3 +703,21 @@ func (r *Repository) RenameHistoryAlias(ctx context.Context, sessionID, entryID 
 	)
 	return err
 }
+
+func (r *Repository) GetNameBaseCommand(
+		ctx context.Context,
+		sessionID int64,
+		alias string,
+) (*model.HistoryEntry, error) {
+	row := r.db.QueryRowContext(ctx,
+			`select id, session_id, seq, source_command, output,
+				coalesce(alias_root, ''), alias_revision, created_at
+			from history_entries
+			where session_id = ? and
+				alias_root = ? and
+				alias_revision = 0
+			limit 1`,
+			sessionID, alias,
+	)
+	return scanHistory(row)
+}
