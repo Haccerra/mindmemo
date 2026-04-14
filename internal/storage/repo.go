@@ -815,3 +815,31 @@ func (r *Repository) SaveProc(ctx context.Context, proc model.Proc) error {
 	)
 	return err
 }
+
+func (r *Repository) UpsertProc(ctx context.Context, name, definition, description string) error {
+	row := r.db.QueryRowContext(ctx,
+			`select created_at from procs where name = ?`,
+			name,
+	)
+
+	var created string
+	err := row.Scan(&created)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		created = nowText()
+	}
+
+	_, err = r.db.ExecContext(ctx,
+			`insert into procs(name, definition, description,
+				created_at, updated_at)
+			values(?, ?, ?, ?, ?)
+			on conflict(name) do update set
+				definition = excluded.definition,
+				description = excluded.description,
+				updated_at = excluded.updated_at`,
+			name, definition, description, created, nowText(),
+	)
+	return err
+}
