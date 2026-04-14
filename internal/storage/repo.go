@@ -737,3 +737,27 @@ func (r *Repository) NextAliasRevision(ctx context.Context, sessionID int64, ali
 
 	return rev, nil
 }
+
+func (r *Repository) GetAliasRevisionByOffset(
+		ctx context.Context,
+		sessionID int64,
+		alias string,
+		offset int,
+) (*model.HistoryEntry, error) {
+	entries, err := r.ListAliasRevisions(ctx, sessionID, alias)
+	if err != nil {
+		return nil, err
+	}
+	if len(entries) == 0 {
+		return nil, ErrNotFound
+	}
+
+	index := 0
+	if offset < 0 {
+		index = -offset
+	}
+	if index >= len(entries) {
+		return nil, ErrNotFound
+	}
+	return &entries[index], nil
+}
