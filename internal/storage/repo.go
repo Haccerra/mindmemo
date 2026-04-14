@@ -668,3 +668,11 @@ func (r *Repository) SearchHistory(
 
 	return out, nil
 }
+
+func (r *Repository) DeleteHistoryEntry(ctx context.Context, sessionID, entryID int64) error {
+	_, err := r.db.ExecContext(ctx,
+			`delete from history_entries where id = ? and session_id = ?`,
+			entryID, sessionID,
+	)
+	return err
+}
