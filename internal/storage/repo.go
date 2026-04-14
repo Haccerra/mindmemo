@@ -676,3 +676,30 @@ func (r *Repository) DeleteHistoryEntry(ctx context.Context, sessionID, entryID 
 	)
 	return err
 }
+
+func (r *Repository) RenameHistoryAlias(ctx context.Context, sessionID, entryID int64, alias string) error {
+	entry, err := r.GetHistoryEntry(ctx, entryID)
+	if err != nil {
+		return err
+	}
+	if entry.SessionID != sessionID {
+		return ErrNotFound
+	}
+	if entry.AliasRoot == "" {
+		_, err := r.db.ExecContext(ctx,
+				`update history_entries
+				set alias_root = ?, alias_revision = 0
+				where id = ? and session_id = ?`,
+				alias, entryID, sessionID,
+		)
+		return err
+	}
+
+	_, err = r.db.ExecContext(ctx,
+			`update history_entries
+			set alias_root = ?
+			where session_id = ? and alias_root = ?`,
+			alias, sessionID, entry.AliasRoot,
+	)
+	return err
+}
