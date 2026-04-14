@@ -542,3 +542,18 @@ func (r *Repository) LastHistoryEntry(ctx context.Context, sessionID int64) (*mo
 
 	return entry, nil
 }
+
+func (r *Repository) ForgetLastHistoryEntry(ctx context.Context, sessionID int64) (*model.HistoryEntry, error) {
+	entry, err := r.LastHistoryEntry(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := r.db.ExecContext(ctx,
+			`delete from history_entries where id = ?`,
+			entry.ID); err != nil {
+		return nil, err
+	}
+
+	return entry, nil
+}
