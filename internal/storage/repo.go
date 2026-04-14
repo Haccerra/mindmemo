@@ -521,3 +521,24 @@ func (r *Repository) AddHistory(
 	return e, nil
 }
 
+func (r *Repository) LastHistoryEntry(ctx context.Context, sessionID int64) (*model.HistoryEntry, error) {
+	row := r.db.QueryRowContext(ctx,
+			`select id, session_id, seq, source_command, output,
+				coalesce(alias_root, ''), alias_revision, created_at
+			from history_entries
+			where session_id = ?
+			order by seq desc
+			limit 1`,
+			sessionID,
+	)
+
+	entry, err := scanHistory(row)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	return entry, nil
+}
