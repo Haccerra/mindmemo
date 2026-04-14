@@ -851,3 +851,36 @@ func (r *Repository) DeleteProc(ctx context.Context, name string) error {
 	)
 	return err
 }
+
+func (r *Repository) GetProc(ctx context.Context, name string) (*model.Proc, error) {
+	row := r.db.QueryRowContext(ctx,
+			`select name, definition, description,
+				created_at, updated_at
+			from procs where name = ?`,
+			name,
+	)
+
+	var p model.Proc
+	var created, updated string
+	if err := row.Scan(&p.Name, &p.Definition, &p.Description,
+			&created, &updated); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	createdAt, err := parseTime(created)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedAt, err := parseTime(updated)
+	if err != nil {
+		return nil, err
+	}
+
+	p.CreatedAt = createdAt
+	p.UpdatedAt = updatedAt
+	return &p, nil
+}
