@@ -470,3 +470,54 @@ func (r *Repository) NextSeq(ctx context.Context, sessionID int64) (int64, error
 	}
 	return seq, nil
 }
+
+func (r *Repository) AddHistory(
+		ctx context.Context,
+		sessionID int64,
+		source string,
+		output []byte,
+		aliasRoot string,
+		aliasRevision int,
+) (model.HistoryEntry, error) {
+	seq, err := r.NextSeq(ctx, sessionID)
+	if err != nil {
+		return model.HistoryEntry{}, err
+	}
+
+	created := nowText()
+	res, err := r.db.ExecContext(ctx,
+			`insert into history_entries(session_id, seq, source_command,
+				output, alias_root, alias_revision, created_at)
+			values(?, ?, ?, ?, nullif(?, ''), ?, ?)`,
+			sessionID, seq, source, output, aliasRoot, aliasRevision, created,
+	)
+
+	if err != nil {
+		return model.HistoryEntry{}, err
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return model.HistoryEntry{}, err
+	}
+
+	t, err := parseTime(created)
+	if err != nil {
+		return model.HistoryEntry{}, err
+	}
+
+	e := model.HistoryEntry{
+		ID:        id,
+		SessionID: sessionID,
+		Seq:       seq,
+		Source:    source,
+		Output:    output,
+		AliasRoot: aliasRoot,
+		AliasRev:  aliasRevision,
+		CreatedAt: t,
+	}
+	e.DisplayAlias = displayAlias(aliasRoot, aliasRevision)
+
+	return e, nil
+}
+
