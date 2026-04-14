@@ -795,3 +795,23 @@ func (r *Repository) ListAliasRevisions(
 
 	return out, nil
 }
+
+func (r *Repository) SaveProc(ctx context.Context, proc model.Proc) error {
+	now := nowText()
+	created := now
+	existing, err := r.GetProc(ctx, proc.Name)
+	if err == nil {
+		created = existing.CreatedAt.UTC().Format(timeFormat)
+	}
+	_, err = r.db.ExecContext(ctx,
+			`insert into procs(name, definition, description,
+				created_at, updated_at)
+			values(?, ?, ?, ?, ?)
+			on conflict(name) do update set
+				definition = excluded.definition,
+				description = excluded.description,
+				updated_at = excluded.updated_at`,
+			proc.Name, proc.Definition, proc.Description, created, now,
+	)
+	return err
+}
