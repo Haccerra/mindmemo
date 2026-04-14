@@ -557,3 +557,35 @@ func (r *Repository) ForgetLastHistoryEntry(ctx context.Context, sessionID int64
 
 	return entry, nil
 }
+
+func (r *Repository) NameLastHistoryEntry(ctx context.Context, sessionID int64, alias string) (*model.HistoryEntry, error) {
+	entry, err := r.LastHistoryEntry(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx,
+			`update history_entries
+			set alias_root = ?, alias_revision = 0
+			where id = ?`,
+			alias, entry.ID); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	updated, err := r.GetHistoryEntry(ctx, entry.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return updated, nil
+}
