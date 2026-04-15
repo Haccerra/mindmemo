@@ -1269,3 +1269,11 @@ func (r *Repository) setStateTx(ctx context.Context, tx *sql.Tx, key, value stri
 	)
 	return err
 }
+
+func (r *Repository) clearState(ctx context.Context, key string) error {
+	_, err := r.db.ExecContext(ctx,
+			`delete from runtime_state where key = ?`,
+			key,
+	)
+	return err
+}
