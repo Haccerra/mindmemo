@@ -1136,3 +1136,7 @@ func (r *Repository) LoadProcDraft(ctx context.Context) (*model.ProcDraft, error
 
 	return &draft, nil
 }
+
+func (r *Repository) ClearProcDraft(ctx context.Context) error {
+	return r.clearState(ctx, "proc_draft")
+}
