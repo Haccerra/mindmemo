@@ -1119,3 +1119,20 @@ func (r *Repository) SaveProcDraft(ctx context.Context, draft model.ProcDraft) e
 
 	return err
 }
+
+func (r *Repository) LoadProcDraft(ctx context.Context) (*model.ProcDraft, error) {
+	value, err := r.getState(ctx, "proc_draft")
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	var draft model.ProcDraft
+	if err := json.Unmarshal([]byte(value), &draft); err != nil {
+		return nil, err
+	}
+
+	return &draft, nil
+}
