@@ -1227,3 +1227,20 @@ func (r *Repository) getState(ctx context.Context, key string) (string, error) {
 
 	return value, nil
 }
+
+func (r *Repository) getStateTx(ctx context.Context, tx *sql.Tx, key string) (string, error) {
+	row := tx.QueryRowContext(ctx,
+			`select value from runtime_state where key = ?`,
+			key,
+	)
+
+	var value string
+	if err := row.Scan(&value); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrNotFound
+		}
+		return "", err
+	}
+
+	return value, nil
+}
