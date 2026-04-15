@@ -43,7 +43,7 @@ func (r *Repository) DB() *sql.DB {
 	return r.db
 }
 
-func (r *Repository) AllocateUknownSessionName(ctx context.Context) (string, int, error) {
+func (r *Repository) AllocateUnknownSessionName(ctx context.Context) (string, int, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", 0, err
