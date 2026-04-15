@@ -79,3 +79,51 @@ func TestSessionLifecycle(t *testing.T) {
 		t.Fatalf("expected nil active session after close")
 	}
 }
+
+func TestHistoryRevisions(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	s, err := repo.CreateOpenSession(ctx, "s1", false,
+			model.SessionModePermanent, "zsh", 123,
+	)
+	if err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+
+	base, err := repo.AddHistory(ctx, s.ID, "echo one",
+			[]byte("one\n"), "cmd", 0,
+	)
+	if err != nil {
+		t.Fatalf("add base: %v", err)
+	}
+	if base.DisplayAlias != "cmd" {
+		t.Fatalf("unexpected base alias: %s", base.DisplayAlias)
+	}
+
+	rev, err := repo.AddHistory(ctx, s.ID, "echo one",
+			[]byte("one\n"), "cmd", 1,
+	)
+	if err != nil {
+		t.Fatalf("add rev: %v", err)
+	}
+	if rev.DisplayAlias != "cmd (1)" {
+		t.Fatalf("unexpected revision alias: %s", rev.DisplayAlias)
+	}
+
+	latest, err := repo.GetAliasRevisionByOffset(ctx, s.ID, "cmd", 0)
+	if err != nil {
+		t.Fatalf("get latest revision: %v", err)
+	}
+	if latest.AliasRev != 1 {
+		t.Fatalf("expected latest rev 1, got %d", latest.AliasRev)
+	}
+
+	previous, err := repo.GetAliasRevisionByOffset(ctx, s.ID, "cmd", -1)
+	if err != nil {
+		t.Fatalf("get previous revision: %v", err)
+	}
+	if previous.AliasRev != 0 {
+		t.Fatalf("expected previous rev 0, got %d", previous.AliasRev)
+	}
+}
