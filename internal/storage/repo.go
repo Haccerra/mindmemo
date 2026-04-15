@@ -1258,3 +1258,14 @@ func (r *Repository) getStateIntTx(ctx context.Context, tx *sql.Tx, key string) 
 
 	return i, nil
 }
+
+func (r *Repository) setStateTx(ctx context.Context, tx *sql.Tx, key, value string) error {
+	_, err := tx.ExecContext(ctx,
+			`insert into runtime_state(key, value)
+			values (?, ?)
+			on conflict(key) do update set
+				value = excluded.value`,
+			key, value,
+	)
+	return err
+}
