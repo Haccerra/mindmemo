@@ -1244,3 +1244,17 @@ func (r *Repository) getStateTx(ctx context.Context, tx *sql.Tx, key string) (st
 
 	return value, nil
 }
+
+func (r *Repository) getStateIntTx(ctx context.Context, tx *sql.Tx, key string) (int, error) {
+	value, err := r.getStateTx(ctx, tx, key)
+	if err != nil {
+		return 0, err
+	}
+
+	i, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, err
+	}
+
+	return i, nil
+}
