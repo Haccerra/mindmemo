@@ -1355,3 +1355,7 @@ func scanHistory(
 
 	return &e, nil
 }
+
+func scanHistoryRows(rows *sql.Rows) (*model.HistoryEntry, error) {
+	return scanHistory(rows)
+}
