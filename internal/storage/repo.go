@@ -968,3 +968,31 @@ func (r *Repository) UpsertSessionProc(
 	)
 	return err
 }
+
+func (r *Repository) GetSessionProc(ctx context.Context, sessionID int64, name string) (*model.Proc, error) {
+	row := r.db.QueryRowContext(ctx,
+			`select name, definition, description, updated_at
+			from session_procs
+			where session_id = ? and name = ?`,
+			sessionID, name,
+	)
+
+	var p model.Proc
+	var updated string
+	if err := row.Scan(&p.Name, &p.Definition, &p.Description, &updated); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	updatedAt, err := parseTime(updated)
+	if err != nil {
+		return nil, err
+	}
+
+	p.UpdatedAt = updatedAt
+	p.CreatedAt = updatedAt
+
+	return &p, nil
+}
