@@ -636,7 +636,7 @@ func (r *Repository) SearchHistory(
 		sessionID int64,
 		pattern string,
 ) ([]model.HistoryEntry, error) {
-	q := "%" + string.ToLower(pattern) + "%"
+	q := "%" + strings.ToLower(pattern) + "%"
 	rows, err := r.db.QueryContext(ctx,
 			`select id, session_id, seq, source_command, output,
 				coalesce(alias_root, ''), alias_revision, created_at
@@ -653,7 +653,7 @@ func (r *Repository) SearchHistory(
 	}
 	defer rows.Close()
 
-	var out []model.HistroyEntry
+	var out []model.HistoryEntry
 	for rows.Next() {
 		e, err := scanHistoryRows(rows)
 		if err != nil {
@@ -1327,4 +1327,31 @@ func scanSession(
 
 func scanSessionRows(rows *sql.Rows) (*model.Session, error) {
 	return scanSession(rows)
+}
+
+func scanHistory(
+		row interface{
+			Scan(dest ...any) error
+		},
+) (*model.HistoryEntry, error) {
+	var e model.HistoryEntry
+	var created string
+
+	if err := row.Scan(&e.ID, &e.SessionID, &e.Seq, &e.Source,
+			&e.Output, &e.AliasRoot, &e.AliasRev, &created); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	t, err := parseTime(created)
+	if err != nil {
+		return nil, err
+	}
+
+	e.CreatedAt = t
+	e.DisplayAlias = displayAlias(e.AliasRoot, e.AliasRev)
+
+	return &e, nil
 }
