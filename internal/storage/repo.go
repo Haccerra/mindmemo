@@ -950,3 +950,21 @@ func (r *Repository) ReplaceSessionProcSnapshot(ctx context.Context, sessionID i
 
 	return tx.Commit()
 }
+
+func (r *Repository) UpsertSessionProc(
+		ctx context.Context,
+		sessionID int64,
+		name, definition, description string,
+) error {
+	_, err := r.db.ExecContext(ctx,
+			`insert into session_procs(session_id, name,
+				definition, description, updated_at)
+			values(?, ?, ?, ?, ?)
+			on conflict(session_id, name) do update set
+				definition = excluded.definition,
+				description = excluded.description,
+				updated_at = excluded.updated_at`,
+			sessionID, name, definition, description, nowText(),
+	)
+	return err
+}
