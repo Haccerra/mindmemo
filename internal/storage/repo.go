@@ -1153,3 +1153,19 @@ func (r *Repository) SaveLastOpenedEntry(ctx context.Context, sessionID, entryID
 
 	return err
 }
+
+func (r *Repository) GetLastOpenedEntry(ctx context.Context, sessionID int64) (int64, error) {
+	key := fmt.Sprintf("show_last_entry_%d", sessionID)
+
+	value, err := r.getState(ctx, key)
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
