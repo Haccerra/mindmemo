@@ -996,3 +996,42 @@ func (r *Repository) GetSessionProc(ctx context.Context, sessionID int64, name s
 
 	return &p, nil
 }
+
+func (r *Repository) ListSessionProcs(ctx context.Context, sessionID int64) ([]model.Proc, error) {
+	rows, err := r.db.QueryContext(ctx,
+			`select name, definition, description, updated_at
+			from session_procs
+			where session_id = ?
+			order by name asc`,
+			sessionID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []model.Proc
+	for rows.Next() {
+		var p model.Proc
+		var updated string
+
+		if err := rows.Scan(&p.Name, &p.Definition, &p.Description, &updated); err != nil {
+			return nil, err
+		}
+
+		updatedAt, err := parseTime(updated)
+		if err != nil {
+			return nil, err
+		}
+
+		p.CreatedAt = updatedAt
+		p.UpdatedAt = updatedAt
+		out = append(out, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
