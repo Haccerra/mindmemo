@@ -1169,3 +1169,44 @@ func (r *Repository) GetLastOpenedEntry(ctx context.Context, sessionID int64) (i
 
 	return id, nil
 }
+
+func (r *Repository) getActiveSessionTx(ctx context.Context, tx *sql.Tx) (*model.Session, error) {
+	idRaw, err := r.getStateTx(ctx, tx, "active_session_id")
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	id, err := strconv.ParseInt(idRaw, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	row := tx.QueryRowContext(ctx,
+			`select id, name, auto_named, mode, is_open,
+				open_pid, shell, created_at, closed_at
+			from sessions where id = ?`,
+			id,
+	)
+
+	s, err := scanSession(row)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			if clearErr := r.clearStateTx(ctx, tx, "active_session_id"); clearErr != nil {
+				return nil, clearErr
+			}
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if !s.IsOpen {
+		if err := r.clearStateTx(ctx, tx, "active_session_id"); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+	return s, nil
+}
