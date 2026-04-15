@@ -1102,3 +1102,20 @@ func (r *Repository) ImportProcsTransactional(
 
 	return tx.Commit()
 }
+
+func (r *Repository) SaveProcDraft(ctx context.Context, draft model.ProcDraft) error {
+	payload, err := json.Marshal(draft)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.db.ExecContext(ctx,
+			`insert into runtime_state(key, value)
+			values('proc_draft', ?)
+			on conflict(key) do update set
+				value = excluded.value`,
+			string(payload),
+	)
+
+	return err
+}
