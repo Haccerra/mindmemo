@@ -1043,3 +1043,62 @@ func (r *Repository) DeleteSessionProc(ctx context.Context, sessionID int64, nam
 	)
 	return err
 }
+
+func (r *Repository) ImportProcsTransactional(
+		ctx context.Context,
+		incoming []model.Proc,
+		replace map[string]bool,
+) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, p := range incoming {
+		if p.Name == "" {
+			return fmt.Errorf("invalid proc with empty name")
+		}
+
+		exists := false
+		row := tx.QueryRowContext(ctx,
+				`select 1 from procs where name = ?`,
+				p.Name,
+		)
+
+		var one int
+		err := row.Scan(&one)
+		if err == nil {
+			exists = true
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+
+		if exists && !replace[p.Name] {
+			continue
+		}
+
+		created := nowText()
+
+		if exists {
+			row2 := tx.QueryRowContext(ctx,
+					`select created_at from procs where name = ?`,
+					p.Name,
+			)
+			_ = row2.Scan(&created)
+		}
+
+		if _, err := tx.ExecContext(ctx,
+				`insert into procs(name, definition, description, created_at, updated_at)
+				values (?, ?, ?, ?, ?)
+				on conflict(name) do update set
+					definition = excluded.definition
+					description = excluded.description
+					updated_at = excluded.updated_at`,
+				p.Name, p.Definition, p.Description, created, nowText()); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
