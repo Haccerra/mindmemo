@@ -44,3 +44,38 @@ func TestAllocateUnknownNameIncrements(t *testing.T) {
 		t.Fatalf("unexpected second allocation: %s %d", name2, idx2)
 	}
 }
+
+func TestSessionLifecycle(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	s, err := repo.CreateOpenSession(ctx, "s1", false,
+			model.SessionModePermanent, "zsh", 123,
+	)
+	if err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+	if !s.IsOpen {
+		t.Fatalf("expected open session")
+	}
+
+	active, err := repo.GetActiveSession(ctx)
+	if err != nil {
+		t.Fatalf("get active: %v", err)
+	}
+	if active == nil || active.ID != s.ID {
+		t.Fatalf("unexpected active session: %#v", active)
+	}
+
+	if _, err := repo.CloseActiveSession(ctx); err != nil {
+		t.Fatalf("close active: %v", err)
+	}
+
+	active, err = repo.GetActiveSession(ctx)
+	if err != nil {
+		t.Fatalf("get active after close: %v", err)
+	}
+	if active != nil {
+		t.Fatalf("expected nil active session after close")
+	}
+}
