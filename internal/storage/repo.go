@@ -1285,3 +1285,42 @@ func (r *Repository) clearStateTx(ctx context.Context, tx *sql.Tx, key string) e
 	)
 	return err
 }
+
+func scanSession(
+		row interface{ Scan(dest ...any) error},
+) (*model.Session, error) {
+	var s         model.Session
+	var autoNamed int
+	var mode      string
+	var isOpen    int
+	var created   string
+	var closed    sql.NullString
+
+	if err := row.Scan(&s.ID, &s.Name, &autoNamed, &mode, &isOpen,
+			&s.OpenPID, &s.Shell, &created, &closed); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	t, err := parseTime(created)
+	if err != nil {
+		return nil, err
+	}
+
+	s.CreatedAt = t
+	s.AutoNamed = autoNamed == 1
+	s.Mode = model.SessionMode(mode)
+	s.IsOpen = isOpen == 1
+
+	if closed.Valid {
+		ct, err := parseTime(closed.String)
+		if err != nil {
+			return nil, err
+		}
+		s.ClosedAt = &ct
+	}
+
+	return &s, nil
+}
