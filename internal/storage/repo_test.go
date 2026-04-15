@@ -127,3 +127,59 @@ func TestHistoryRevisions(t *testing.T) {
 		t.Fatalf("expected previous rev 0, got %d", previous.AliasRev)
 	}
 }
+
+func TestProcSnapshotAndDraft(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	if err := repo.UpsertProc(ctx, "build",
+			"go test ./...", "run tests"); err != nil {
+		t.Fatalf("upsert proc: %v", err)
+	}
+
+	s, err := repo.CreateOpenSession(ctx, "s1", false,
+			model.SessionModePermanent, "zsh", 123,
+	)
+	if err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+
+	if err := repo.ReplaceSessionProcSnapshot(ctx, s.ID); err != nil {
+		t.Fatalf("replace snapshot: %v", err)
+	}
+
+	proc, err := repo.GetSessionProc(ctx, s.ID, "build")
+	if err != nil {
+		t.Fatalf("get session proc: %v", err)
+	}
+	if proc.Name != "build" {
+		t.Fatalf("unexpected proc name: %s", proc.Name)
+	}
+
+	draft := model.ProcDraft{
+		Name:       "name",
+		Definition: "echo {}",
+		Desc:       "desc",
+	}
+
+	if err := repo.SaveProcDraft(ctx, draft); err != nil {
+		t.Fatalf("save draft: %v", err)
+	}
+
+	loaded, err := repo.LoadProcDraft(ctx)
+	if err != nil {
+		t.Fatalf("load draft: %v", err)
+	}
+	if loaded.Name != draft.Name || loaded.Definition != draft.Definition ||
+			loaded.Desc != draft.Desc {
+		t.Fatalf("draft mismatch: %#v vs %#v", loaded, draft)
+	}
+
+	if err := repo.ClearProcDraft(ctx); err != nil {
+		t.Fatalf("clear draft: %v", err)
+	}
+
+	if _, err := repo.LoadProcDraft(ctx); err == nil {
+		t.Fatalf("expected missing draft after clear")
+	}
+}
