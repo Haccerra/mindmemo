@@ -1359,3 +1359,13 @@ func scanHistory(
 func scanHistoryRows(rows *sql.Rows) (*model.HistoryEntry, error) {
 	return scanHistory(rows)
 }
+
+func displayAlias(root string, rev int) string {
+	if root == "" {
+		return ""
+	}
+	if rev == 0 {
+		return root
+	}
+	return fmt.Sprintf("%s (%d)", root, rev)
+}
