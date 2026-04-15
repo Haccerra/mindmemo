@@ -1140,3 +1140,16 @@ func (r *Repository) LoadProcDraft(ctx context.Context) (*model.ProcDraft, error
 func (r *Repository) ClearProcDraft(ctx context.Context) error {
 	return r.clearState(ctx, "proc_draft")
 }
+
+func (r *Repository) SaveLastOpenedEntry(ctx context.Context, sessionID, entryID int64) error {
+	key := fmt.Sprintf("show_last_entry_%d", sessionID)
+	_, err := r.db.ExecContext(ctx,
+			`insert into runtime_state(key, value)
+			values(?, ?)
+			on conflict(key) do update set
+				value = excluded.value`,
+			key, strconv.FormatInt(entryID, 10),
+	)
+
+	return err
+}
