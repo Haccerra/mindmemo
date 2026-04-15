@@ -22,6 +22,8 @@ type Repository struct {
 	db *sql.DB
 }
 
+const timeFormat = "2006-01-02T15:04:05.999999999Z07:00"
+
 func New(path string) (*Repository, error) {
 	db, err := Open(path)
 	if err != nil {
