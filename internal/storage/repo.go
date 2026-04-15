@@ -927,3 +927,26 @@ func (r *Repository) ListProcs(ctx context.Context) ([]model.Proc, error) {
 
 	return out, nil
 }
+
+func (r *Repository) ReplaceSessionProcSnapshot(ctx context.Context, sessionID int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx,
+			`delete from session_procs where session_id = ?`,
+			sessionID); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx,
+			`insert into session_procs(session_id, name, definition, description, updated_at)
+			select ?, name, definition, description, updated_at from procs`,
+			sessionID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
