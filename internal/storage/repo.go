@@ -1035,3 +1035,11 @@ func (r *Repository) ListSessionProcs(ctx context.Context, sessionID int64) ([]m
 
 	return out, nil
 }
+
+func (r *Repository) DeleteSessionProc(ctx context.Context, sessionID int64, name string) error {
+	_, err := r.db.ExecContext(ctx,
+			`delete from session_procs where session_id = ? and name = ?`,
+			sessionID, name,
+	)
+	return err
+}
