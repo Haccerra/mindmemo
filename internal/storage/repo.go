@@ -1324,3 +1324,7 @@ func scanSession(
 
 	return &s, nil
 }
+
+func scanSessionRows(rows *sql.Rows) (*model.Session, error) {
+	return scanSession(rows)
+}
