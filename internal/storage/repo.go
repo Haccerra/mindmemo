@@ -1376,3 +1376,10 @@ func boolToInt(v bool) int {
 	}
 	return 0
 }
+
+func SortHistoryByRevision(entries []model.HistoryEntry) {
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].AliasRev < entries[j].AliasRev
+	})
+}
+
